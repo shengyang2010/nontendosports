@@ -1,0 +1,14 @@
+{
+  "name": "party-sports",
+  "version": "1.0.0",
+  "description": "Phone-controlled party sports: bowling and golf",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  }
+}
