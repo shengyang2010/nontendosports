@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nontendo Sports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --p1: #ff6b6b; --p2: #2ec4b6; --ink: #24324a; --soft: #f4f7fb;
+    --font: "Fredoka", "Nunito", "Segoe UI Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; font-family: var(--font); color: var(--ink); background: #bfe6ff; }
+  canvas#lane { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* ---------- Overlays ---------- */
+  .overlay { position: fixed; inset: 0; overflow-y: auto; padding: 16px; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 30% 20%, #fff7d6 0, #bfe6ff 45%, #9fd3ff 100%); z-index: 10; }
+  .overlay.hidden { display: none; }
+  .card { margin: auto; background: #fff; border-radius: 32px; padding: 24px 40px; box-shadow: 0 18px 50px rgba(36,50,74,.18); text-align: center; }
+  h1.logo { font-size: 54px; margin: 0 0 4px; letter-spacing: 1px; font-weight: 700;
+    background: linear-gradient(90deg, var(--p1), #ffb347, var(--p2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { margin: 0 0 16px; font-size: 20px; opacity: .7; }
+  .lobby { display: grid; grid-template-columns: auto 1fr; gap: 36px; align-items: center; text-align: left; }
+  #qr { width: 200px; height: 200px; border-radius: 20px; background: var(--soft); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #qr img, #qr svg { width: 100%; height: 100%; image-rendering: pixelated; }
+  .code { font-size: 56px; font-weight: 700; letter-spacing: 10px; margin: 0; }
+  .url { font-size: 18px; word-break: break-all; opacity: .75; margin: 4px 0 20px; }
+  .players { display: flex; gap: 16px; }
+  .pcard { width: 170px; padding: 18px; border-radius: 22px; background: var(--soft); text-align: center;
+    transition: transform .25s cubic-bezier(.3,1.6,.5,1), background .2s; }
+  .pcard .avatar { width: 64px; height: 64px; margin: 0 auto 8px; border-radius: 50%; background: #d9e1ec; position: relative; }
+  .pcard .avatar::after { content: ""; position: absolute; left: 50%; top: 50%; width: 30px; height: 10px; border-radius: 0 0 20px 20px;
+    border: 4px solid rgba(255,255,255,.9); border-top: 0; transform: translate(-50%, 0); }
+  .pcard .name { font-weight: 700; font-size: 22px; }
+  .pcard .state { font-size: 15px; opacity: .6; }
+  .pcard.on { transform: scale(1.06); color: #fff; }
+  .pcard.on .state { opacity: .9; }
+  .pcard.p1.on { background: var(--p1); } .pcard.p2.on { background: var(--p2); }
+  .pcard.on .avatar { background: rgba(255,255,255,.35); }
+  .btn { font-family: var(--font); font-size: 26px; font-weight: 700; border: 0; border-radius: 999px; padding: 14px 44px; cursor: pointer;
+    background: #ffcc33; color: var(--ink); box-shadow: 0 6px 0 #e0a800; transition: transform .1s; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #e0a800; }
+  .btn:disabled { background: #e3e8ef; box-shadow: 0 6px 0 #c9d1dc; color: #9aa6b8; cursor: default; }
+  .link { background: none; border: 0; font-family: var(--font); font-size: 16px; color: var(--ink); opacity: .6; cursor: pointer; text-decoration: underline; margin-top: 12px; }
+  .actions { margin-top: 18px; display: flex; flex-direction: column; align-items: center; }
+  .note { font-size: 14px; opacity: .55; margin-top: 10px; max-width: 520px; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 5; display: none; }
+  #hud.show { display: block; }
+  .board { background: rgba(255,255,255,.94); border-radius: 22px; padding: 10px 14px; box-shadow: 0 8px 24px rgba(36,50,74,.15); }
+  .row { display: flex; align-items: center; gap: 4px; margin: 4px 0; opacity: .55; transition: opacity .2s; }
+  .row.active { opacity: 1; }
+  .chip { width: 46px; height: 46px; border-radius: 50%; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 6px; }
+  .frame { width: 54px; height: 50px; background: var(--soft); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+  .frame.tenth { width: 74px; }
+  .frame.now { box-shadow: inset 0 0 0 3px #ffcc33; }
+  .frame .balls { display: flex; justify-content: flex-end; font-size: 15px; font-weight: 600; height: 22px; }
+  .frame .balls span { width: 18px; text-align: center; }
+  .frame .balls span:not(:first-child) { border-left: 1px solid #dde3ec; }
+  .frame .cum { font-size: 18px; font-weight: 700; text-align: center; flex: 1; }
+  .total { width: 64px; text-align: center; font-size: 26px; font-weight: 700; }
+
+  #turn { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 5; color: #fff; font-size: 28px; font-weight: 700;
+    padding: 12px 34px; border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,.18); display: none; white-space: nowrap; }
+  #turn.show { display: block; }
+  #turn.ready { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: translateX(-50%) scale(1.06); } }
+
+  #status { position: fixed; right: 18px; bottom: 18px; z-index: 5; display: flex; gap: 8px; }
+  #status span { padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.9); font-size: 14px; font-weight: 600; }
+  #status i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: #c9d1dc; }
+  #status .on i { background: #3ccf6e; }
+  #roomtag { position: fixed; left: 18px; bottom: 18px; z-index: 5; background: rgba(255,255,255,.9); border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 14px; display: none; }
+
+  #pop { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0); z-index: 6; font-size: 120px; font-weight: 700;
+    color: #fff; -webkit-text-stroke: 6px var(--ink); paint-order: stroke fill; pointer-events: none; white-space: nowrap; }
+  #pop.go { animation: pop 1.6s cubic-bezier(.3,1.6,.5,1) forwards; }
+  #pop.small { font-size: 76px; }
+  @keyframes pop { 0% { transform: translate(-50%,-50%) scale(0) rotate(-8deg); } 18% { transform: translate(-50%,-50%) scale(1.1) rotate(3deg); }
+    28% { transform: translate(-50%,-50%) scale(1) rotate(0); } 80% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
+
+  .confetti { position: fixed; top: -20px; width: 12px; height: 18px; z-index: 7; border-radius: 3px; pointer-events: none; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+  .winner { font-size: 48px; font-weight: 700; margin: 10px 0 18px; }
+  .final { display: flex; gap: 22px; justify-content: center; margin-bottom: 10px; }
+  .final div { padding: 16px 26px; border-radius: 22px; color: #fff; font-size: 22px; font-weight: 600; }
+  .final b { display: block; font-size: 48px; }
+
+  /* ---------- Sport picker ---------- */
+  .sports { display: flex; gap: 18px; justify-content: center; margin-top: 18px; }
+  .sport { font-family: var(--font); width: 220px; padding: 16px; border-radius: 24px; border: 4px solid transparent; background: var(--soft);
+    font-size: 26px; font-weight: 700; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; align-items: center;
+    transition: transform .2s cubic-bezier(.3,1.6,.5,1), border-color .2s, background .2s; }
+  .sport .icon { font-size: 40px; line-height: 1.1; }
+  .sport small { font-size: 14px; font-weight: 600; opacity: .6; }
+  .sport.picked { border-color: #ffcc33; background: #fff8dc; transform: scale(1.06); }
+
+  /* ---------- Golf HUD ---------- */
+  #info { position: fixed; left: 18px; top: 16px; z-index: 5; background: rgba(255,255,255,.94); border-radius: 22px; padding: 14px 18px;
+    box-shadow: 0 8px 24px rgba(36,50,74,.15); display: none; min-width: 230px; }
+  #info.show { display: block; }
+  .ihole { font-size: 30px; font-weight: 700; line-height: 1; margin-bottom: 8px; }
+  .ihole span { display: block; font-size: 15px; font-weight: 600; opacity: .6; margin-top: 4px; }
+  .irow { font-size: 17px; margin: 3px 0; }
+  .wind .arrow { display: inline-block; font-weight: 700; color: #5b7cfa; font-size: 20px; }
+  body[data-sport="golf"] #hud { left: auto; right: 18px; transform: none; }
+  .gcell { width: 56px; height: 46px; background: var(--soft); border-radius: 10px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; font-size: 22px; font-weight: 700; }
+  .gcell.head { background: none; height: 34px; font-size: 16px; line-height: 1; }
+  .gcell.head small { font-size: 11px; opacity: .6; font-weight: 600; }
+  .gcell.head.now { color: #e0a800; }
+  .gcell.under { background: #d6f5dd; color: #1f8f43; }
+  .gcell.overpar { background: #ffe1e3; color: #c9303f; }
+  .row.golfhead { opacity: 1; margin: 0; }
+  .total.small { font-size: 14px; }
+  .final small { display: block; font-size: 18px; opacity: .9; }
+  #menuBtn { position: fixed; left: 18px; bottom: 56px; z-index: 6; display: none; font-family: var(--font); font-weight: 700; font-size: 16px;
+    border: 0; border-radius: 999px; padding: 10px 18px; background: rgba(255,255,255,.95); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+  #pause { z-index: 30; }
+  #pause .btn { width: 280px; }
+  .btn.alt { background: #e3e8ef; box-shadow: 0 6px 0 #c9d1dc; }
+  .btn.danger { background: #ff6b6b; color: #fff; box-shadow: 0 6px 0 #d94b4b; }
+</style>
+</head>
+<body>
+<canvas id="lane"></canvas>
+
+<!-- Lobby -->
+<div class="overlay" id="lobby">
+  <div class="card">
+    <h1 class="logo">Nontendo Sports</h1>
+    <p class="sub">Scan with your phone to join. Up to 2 players.</p>
+    <div class="lobby">
+      <div id="qr">Loading…</div>
+      <div>
+        <p class="code" id="code">····</p>
+        <p class="url" id="url"></p>
+        <div class="players">
+          <div class="pcard p1" id="card1"><div class="avatar"></div><div class="name">Player 1</div><div class="state">Waiting…</div></div>
+          <div class="pcard p2" id="card2"><div class="avatar"></div><div class="name">Player 2</div><div class="state">Waiting…</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sports">
+      <button class="sport" data-sport="bowling"><span class="icon">🎳</span>Bowling<small>Swing &amp; release</small></button>
+      <button class="sport" data-sport="golf"><span class="icon">⛳</span>Golf<small>3 holes · swing like a club</small></button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="start" disabled>Start game</button>
+      <button class="link" id="practice">No phone? Practise with the keyboard (Space to play, arrows to aim in golf)</button>
+      <p class="note" id="httpsNote"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Game over -->
+<div class="overlay hidden" id="over">
+  <div class="card">
+    <h1 class="logo">Game over</h1>
+    <div class="winner" id="winner"></div>
+    <div class="final" id="final"></div>
+    <div class="actions">
+      <button class="btn" id="again">Play again</button>
+      <button class="link" id="toLobby">Back to lobby</button>
+    </div>
+  </div>
+</div>
+
+<div id="hud"><div class="board" id="board"></div></div>
+<div id="info"></div>
+<div id="turn"></div>
+<div id="pop"></div>
+<div id="roomtag"></div>
+<button id="menuBtn" title="Pause (Esc)">❚❚ Menu</button>
+
+<!-- Pause menu -->
+<div class="overlay hidden" id="pause" style="background: rgba(36,50,74,.55)">
+  <div class="card">
+    <h1 class="logo">Paused</h1>
+    <p class="sub" id="pauseBy"></p>
+    <div class="actions" style="gap:14px">
+      <button class="btn" id="resume">Resume</button>
+      <button class="btn alt" id="restart">Restart</button>
+      <button class="btn danger" id="quit">Quit to lobby</button>
+    </div>
+    <p class="note">Press Esc to pause or resume. Players can also pause from their phones.</p>
+  </div>
+</div>
+<div id="status"><span id="st1"><i></i>P1</span><span id="st2"><i></i>P2</span></div>
+
+<script type="module" src="host.js"></script>
+</body>
+</html>

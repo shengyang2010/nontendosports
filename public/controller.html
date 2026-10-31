@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#24324a">
+<title>Nontendo Sports · Controller</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --c: #5b7cfa; --ink: #24324a; --font: "Fredoka", "Nunito", system-ui, sans-serif; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; font-family: var(--font); color: #fff; background: var(--c);
+    transition: background .3s; overscroll-behavior: none; }
+  body.wait { background: #8a96ab; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+    padding: calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 16px); text-align: center; }
+  .screen.show { display: flex; }
+  h1 { font-size: 40px; margin: 0 0 8px; }
+  p { font-size: 18px; opacity: .9; margin: 6px 0; }
+  .btn { font-family: var(--font); font-size: 26px; font-weight: 700; border: 0; border-radius: 999px; padding: 18px 48px; margin-top: 24px;
+    background: #ffcc33; color: var(--ink); box-shadow: 0 6px 0 #e0a800; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #e0a800; }
+  input { font-family: var(--font); font-size: 36px; text-align: center; letter-spacing: 8px; width: 220px; padding: 10px; border-radius: 18px;
+    border: 0; text-transform: uppercase; color: var(--ink); margin-top: 16px; }
+
+  header { position: absolute; top: calc(env(safe-area-inset-top) + 14px); left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .tag { background: rgba(255,255,255,.22); padding: 8px 16px; border-radius: 999px; font-weight: 700; font-size: 18px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: #ffcc33; }
+  .dot.good { background: #3ccf6e; } .dot.ok { background: #ffcc33; } .dot.bad, .dot.reconnecting { background: #ff4d5e; }
+
+  #turnText { font-size: 30px; font-weight: 700; margin-bottom: 18px; min-height: 40px; }
+  #hold { width: 68vmin; height: 68vmin; max-width: 340px; max-height: 340px; border-radius: 50%; background: #fff; color: var(--c);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 30px; font-weight: 700;
+    box-shadow: 0 12px 0 rgba(0,0,0,.18), inset 0 -10px 0 rgba(0,0,0,.06); transition: transform .12s;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #hold small { font-size: 16px; opacity: .7; font-weight: 600; margin-top: 4px; }
+  #hold.down { transform: scale(.94); box-shadow: 0 4px 0 rgba(0,0,0,.18); }
+  body.wait #hold { opacity: .55; }
+  #hold.swipe { border-radius: 36px; height: 58vh; max-height: none; width: 80vw; max-width: 380px; }
+  #trail { position: fixed; inset: 0; pointer-events: none; }
+  #hint { margin-top: 26px; font-size: 22px; font-weight: 600; min-height: 30px; }
+  #result { font-size: 46px; font-weight: 700; min-height: 56px; }
+  #aim { display: none; width: 80vw; max-width: 340px; margin: 0 0 18px; }
+  #aim .bar { position: relative; height: 14px; border-radius: 999px; background: rgba(255,255,255,.3); }
+  #aim .bar::after { content: ""; position: absolute; left: 50%; top: -4px; width: 2px; height: 22px; background: rgba(255,255,255,.7); }
+  #aimDot { position: absolute; top: 50%; left: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: left .06s linear; }
+  #aimLbl { font-size: 16px; font-weight: 600; margin-top: 8px; opacity: .9; }
+  footer { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 12px); left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+  footer label { display: flex; gap: 6px; align-items: center; opacity: .9; }
+  footer input { width: 20px; height: 20px; margin: 0; letter-spacing: 0; }
+  #helpBtn { font-family: var(--font); font-size: 15px; font-weight: 700; border: 0; border-radius: 999px; padding: 8px 14px; background: rgba(255,255,255,.25); color: #fff; }
+  .howto { text-align: left; max-width: 360px; background: rgba(255,255,255,.14); border-radius: 22px; padding: 14px 18px; margin: 12px 0; }
+  .howto ol { margin: 0; padding-left: 22px; font-size: 17px; line-height: 1.45; }
+  .howto b { color: #ffe27a; }
+  #howto { z-index: 20; background: var(--c); }
+  #golfCtl { display: none; width: 92vw; max-width: 400px; margin-bottom: 14px; }
+  #golfCtl.off .grow { opacity: .45; pointer-events: none; }
+  #gInfo { font-size: 16px; font-weight: 600; opacity: .95; margin-bottom: 10px; }
+  .grow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .gbtn { font-family: var(--font); width: 70px; height: 64px; border: 0; border-radius: 20px; background: rgba(255,255,255,.25); color: #fff;
+    font-size: 28px; font-weight: 700; line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; }
+  .gbtn small { font-size: 12px; opacity: .85; }
+  .gbtn:active, .cbtn:active { background: rgba(255,255,255,.45); }
+  .club { flex: 1; display: flex; align-items: center; background: #fff; color: var(--c); border-radius: 20px; height: 64px; }
+  .cbtn { font-family: var(--font); border: 0; background: none; color: var(--c); font-size: 22px; width: 40px; height: 100%; }
+  #gClub { flex: 1; font-size: 20px; font-weight: 700; line-height: 1.1; }
+  #gClub small { display: block; font-size: 13px; opacity: .7; }
+  #gPower { font-size: 34px; font-weight: 700; min-height: 40px; margin-top: 6px; }
+  body[data-sport="golf"] #hold { width: 60vmin; height: 60vmin; }
+  body[data-sport="golf"] #hold.swipe { height: 42vh; }
+  .howto .sp { display: block; margin-bottom: 6px; color: #fff; font-size: 18px; }
+  #setup .howto { margin: 8px 0; }
+  #setup .howto ol { font-size: 15px; }
+  #setup { justify-content: flex-start; overflow-y: auto; }
+  #menuBtn { font-family: var(--font); font-size: 15px; font-weight: 700; border: 0; border-radius: 999px; padding: 8px 14px; background: rgba(255,255,255,.25); color: #fff; }
+  #pauseScr { z-index: 25; background: #24324a; }
+  #pauseScr .btn { width: 270px; margin-top: 16px; padding: 18px 20px; white-space: nowrap; }
+  .btn.alt { background: #e3e8ef; box-shadow: 0 6px 0 #aab4c3; }
+  .btn.danger { background: #ff6b6b; color: #fff; box-shadow: 0 6px 0 #c94444; }
+</style>
+</head>
+<body>
+<!-- Setup -->
+<section class="screen show" id="setup">
+  <h1>Nontendo Sports</h1>
+  <p id="setupText">Tap start, then hold your phone still for a second.</p>
+  <div class="howto steps" data-sport="bowling"><b class="sp">🎳 Bowling</b><ol>
+    <li><b>Hold it like a TV remote</b>: screen facing up, top of the phone pointing at the laptop.</li>
+    <li><b>Tilt left or right to aim.</b> Watch the line on the big screen.</li>
+    <li><b>Press and hold</b> the big button with your thumb.</li>
+    <li><b>Swing your arm</b> back, then forward like a real bowl.</li>
+    <li><b>Let go of the button</b> as your arm comes forward.</li>
+    <li>For a curve: <b>twist your wrist</b> as you let go.</li>
+  </ol></div>
+  <div class="howto steps" data-sport="golf"><b class="sp">⛳ Golf</b><ol>
+    <li><b>Hold it like a club grip</b> with both hands: top of the phone pointing at the floor, screen facing you.</li>
+    <li>Stand side-on like a golfer. Use the <b>◀ ▶ buttons</b> to aim and change club.</li>
+    <li><b>Press and hold</b> the screen with your thumbs and keep holding.</li>
+    <li><b>Swing back</b>: the further back, the more power. Watch the meter on the big screen.</li>
+    <li><b>Swing through</b>: the ball is hit automatically as the phone passes the start point.</li>
+    <li>Keep the phone face <b>square</b> to hit straight. Twisting it at impact hooks or slices.</li>
+  </ol></div>
+  <input id="roomInput" maxlength="4" placeholder="CODE" autocomplete="off" style="display:none">
+  <button class="btn" id="enable">Start</button>
+  <p id="setupErr" style="margin-top:18px;font-weight:600"></p>
+</section>
+
+<!-- Calibrating -->
+<section class="screen" id="calib">
+  <h1>Hold still…</h1>
+  <p>Rest your phone in your hand without moving.</p>
+</section>
+
+<!-- Game -->
+<section class="screen" id="play">
+  <header><span class="tag" id="me">Player ?</span><span class="tag"><span class="dot" id="dot"></span><span id="ms">--</span></span></header>
+  <div id="result"></div>
+  <div id="turnText">Connecting…</div>
+  <div id="golfCtl">
+    <div id="gInfo">Waiting for your shot…</div>
+    <div class="grow">
+      <button class="gbtn" id="aimL">⟲<small>aim</small></button>
+      <div class="club"><button class="cbtn" id="clubPrev">◀</button><div id="gClub">Club</div><button class="cbtn" id="clubNext">▶</button></div>
+      <button class="gbtn" id="aimR">⟳<small>aim</small></button>
+    </div>
+    <div id="gPower"></div>
+  </div>
+  <div id="aim"><div class="bar"><div id="aimDot"></div></div><div id="aimLbl">Straight</div></div>
+  <div id="hold">HOLD<small>then swing &amp; let go</small></div>
+  <div id="hint"></div>
+  <footer><label><input type="checkbox" id="revSpin"><span id="revLbl">Reverse spin</span></label><span><button id="helpBtn">How to hold</button> <button id="menuBtn">❚❚ Menu</button></span></footer>
+  <div id="why" style="font-size:14px;opacity:.8;margin-top:8px;max-width:340px"></div>
+</section>
+<section class="screen" id="howto">
+  <h1>How to play</h1>
+  <div class="howto steps" data-sport="bowling"><b class="sp">🎳 Bowling</b><ol>
+    <li><b>Hold it like a TV remote</b>: screen facing up, top of the phone pointing at the laptop.</li>
+    <li><b>Tilt left or right to aim.</b> Watch the line on the big screen.</li>
+    <li><b>Press and hold</b> the big button with your thumb.</li>
+    <li><b>Swing your arm</b> back, then forward like a real bowl.</li>
+    <li><b>Let go of the button</b> as your arm comes forward.</li>
+    <li>For a curve: <b>twist your wrist</b> as you let go.</li>
+  </ol></div>
+  <div class="howto steps" data-sport="golf"><b class="sp">⛳ Golf</b><ol>
+    <li><b>Hold it like a club grip</b> with both hands: top of the phone pointing at the floor, screen facing you.</li>
+    <li>Stand side-on like a golfer. Use the <b>◀ ▶ buttons</b> to aim and change club.</li>
+    <li><b>Press and hold</b> the screen with your thumbs and keep holding.</li>
+    <li><b>Swing back</b>: the further back, the more power. Watch the meter on the big screen.</li>
+    <li><b>Swing through</b>: the ball is hit automatically as the phone passes the start point.</li>
+    <li>Keep the phone face <b>square</b> to hit straight. Twisting it at impact hooks or slices.</li>
+  </ol></div>
+  <button class="btn" id="howtoClose">Got it</button>
+</section>
+<section class="screen" id="pauseScr">
+  <h1>Paused</h1>
+  <p id="pauseTxt">The game is paused.</p>
+  <button class="btn" id="pResume">Resume</button>
+  <button class="btn alt" id="pRestart">Restart</button>
+  <button class="btn danger" id="pQuit">Quit to menu</button>
+</section>
+<canvas id="trail"></canvas>
+
+<script type="module" src="controller.js"></script>
+</body>
+</html>
